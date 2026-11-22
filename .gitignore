@@ -1,0 +1,15 @@
+# Local report output; deliberately sanitized example CSV files may be committed elsewhere.
+Reports/
+reports/
+*.log
+
+# Operator-specific configuration and environment values.
+.env
+.env.*
+!.env.example
+*.local.json
+*.local.psd1
+*.local.ps1
+
+# Editor / operating-system state.
+.DS_Store
