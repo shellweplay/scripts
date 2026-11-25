@@ -47,7 +47,7 @@ https://learn.microsoft.com/en-us/graph/paging
 #>
 [CmdletBinding()]
 param(
-    [ValidatePattern('^[0-9]{1,6}
+    [ValidatePattern('^[0-9]{1,6}$')][ValidateScript({ [int]$_ -ge 1 -and [int]$_ -le 365000 })][string]$DaysBack,
     [Parameter(Mandatory)][guid]$TenantId,
     [string]$CsvDirectory = '.',
     [ValidateRange(1,100000)][int]$MaxPages = 10000,
