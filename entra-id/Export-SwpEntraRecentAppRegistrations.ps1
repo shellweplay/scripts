@@ -13,6 +13,14 @@ Current owners are not evidence of who created an application. AppName, client/o
 IDs, creation time, whole elapsed AgeDays, audience, publisher domain, description,
 type and ReportAsOfUtc are exported. Requires Application.Read.All and
 User.ReadBasic.All delegated for application and basic human owner metadata.
+Version 1.1.0 preserves one application row and adds credential counts/status.
+A companion CSV contains one row per returned certificate, client secret or other
+key credential. CredentialDescription is displayName; validity start/end dates
+are not creation/upload dates. DaysBack still filters application creation time.
+Only allowlisted metadata is exported: never secretText, hint or raw key material.
+CustomKeyIdentifierHex is a decoded custom identifier, not a verified thumbprint.
+ValidityStatus describes dates only, never application health or actual use.
+Missing/malformed collections produce unknown counts, not an empty inventory.
 .PARAMETER DaysBack
 Positive whole number of days before one frozen UTC report timestamp; prompts if omitted.
 .EXAMPLE
@@ -24,8 +32,10 @@ Connect-MgGraph -TenantId '11111111-1111-4111-8111-111111111111' -Scopes 'Applic
 Required intended tenant GUID. Global cloud, delegated, Process-scoped context.
 .PARAMETER CsvDirectory
 Existing protected filesystem directory; defaults to the current directory.
-Dated UTF-8 CSV, atomic no-overwrite open; [null] indicates unavailable values.
-Formula-like cells are neutralized. Zero matches produce a header-only CSV.
+Two dated UTF-8 CSVs, atomic no-overwrite opens; [null] means unavailable.
+Formula-like cells are neutralized, including signed negative day text. Zero
+matches produce two header-only files. A companion-write failure removes newly
+created files where possible and throws; an incomplete pair is never success.
 .PARAMETER MaxPages
 Maximum pages per collection (default 10000). A collection exceeding the bound fails.
 .PARAMETER MaxRecords
@@ -34,14 +44,31 @@ Maximum records per collection (default 1000000). Review memory/query load.
 Maximum additional attempts for HTTP 429/503 (default 3); honors Retry-After
 up to 60 seconds, otherwise stops. The Graph SDK can also retry internally.
 .NOTES
-Version 1.0.0 - 2026-11-25. Lab validation pending.
+Version 1.1.0 - 2026-11-25. Adds credential metadata; lab validation pending.
 PowerShell 7 and Microsoft.Graph.Authentication (install separately).
 Use approved permissions and a dedicated session; no module install, consent,
 authentication, or directory write is performed by this report. No snapshot
 isolation; objects may change during paging. Protect local directory data.
+Both files use the same ReportAsOfUtc. DaysUntilExpiry is signed fractional days
+rounded to two decimals; missing/invalid validity endpoints leave it unavailable.
+ValidityStatus is Expired (end <= report time), NotYetValid (start > report time),
+WithinValidityPeriod, UnknownDates or InvalidDateRange (start >= end).
+CredentialMetadataStatus is Complete, LimitedDetails, Incomplete or Unavailable.
+Optional absent display names/custom identifiers do not imply incomplete data.
+IdentifierStatus reports KeyId=Valid|Missing|Invalid and
+CustomKeyIdentifier=Decoded|Absent|Invalid|NotApplicable independently, separated
+by a semicolon. Password custom identifiers are not used and are NotApplicable.
+Known X509 key types are certificates; other key types remain OtherKey. Missing
+key types leave certificate/other-key counts unknown. An unavailable collection,
+unknown validity dates or invalid range leaves ExpiredCredentialCount unknown.
+The selected keyCredentials property has a tenant-level Graph throttle (currently
+150 requests/minute); existing bounded GET retries honor Retry-After. No extra
+write scopes, credential retrieval calls, audit logs or sign-in queries are used.
 References: https://learn.microsoft.com/en-us/graph/api/application-list?view=graph-rest-1.0
 https://learn.microsoft.com/en-us/graph/api/application-list-owners?view=graph-rest-1.0
 https://learn.microsoft.com/en-us/graph/api/resources/application?view=graph-rest-1.0
+https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0
+https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0
 https://learn.microsoft.com/en-us/graph/permissions-reference
 https://learn.microsoft.com/en-us/graph/paging
 #>
@@ -196,6 +223,29 @@ function Write-SwpCsvFile {
     }
 }
 
+function Export-SwpReportPair {
+    param([object[]]$ApplicationRows, [object[]]$CredentialRows, [string[]]$ApplicationColumns, [string[]]$CredentialColumns)
+    $completed = [System.Collections.Generic.List[string]]::new()
+    try {
+        # Each writer uses CreateNew. Track only paths created successfully by this
+        # run, so a collision in either filename can never delete an older report.
+        $applicationPath = Export-SwpCsv -Rows $ApplicationRows -Prefix 'Entra_AppRegistrations' -Columns $ApplicationColumns
+        [void]$completed.Add($applicationPath)
+        $credentialPath = Export-SwpCsv -Rows $CredentialRows -Prefix 'Entra_AppRegistrationCredentials' -Columns $CredentialColumns
+        [void]$completed.Add($credentialPath)
+        return [pscustomobject]@{ ApplicationPath=$applicationPath; CredentialPath=$credentialPath }
+    } catch {
+        $failure = $_
+        $uncleaned = [System.Collections.Generic.List[string]]::new()
+        foreach ($path in $completed) {
+            try { if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) } }
+            catch { [void]$uncleaned.Add($path) }
+        }
+        if ($uncleaned.Count) { throw "CSV pair export failed; cleanup also failed at '$($uncleaned -join "', '")'. Remove these incomplete report files explicitly. Original failure: $($failure.Exception.Message)" }
+        throw "CSV pair export failed; this run did not complete. $($failure.Exception.Message)"
+    }
+}
+
 
 function ConvertTo-SwpUtc {
     param($Value)
@@ -219,6 +269,161 @@ function Get-SwpAge {
     if ($null -eq $Date -or $Date -gt $asOf) { return $null }
     return [Math]::Floor(($asOf - $Date).TotalDays)
 }
+
+function Get-SwpCredentialCollection {
+    param($Application, [string]$Name)
+    $raw = Get-SwpValue $Application $Name
+    $items = [System.Collections.Generic.List[object]]::new()
+    if ($null -eq $raw) { return [pscustomobject]@{ Items=$items.ToArray(); Status='Unavailable' } }
+    # A missing/null property, a scalar and a returned [] are different evidence.
+    if ($raw -is [string] -or $raw -is [System.Collections.IDictionary] -or $raw -isnot [System.Collections.IEnumerable]) {
+        return [pscustomobject]@{ Items=$items.ToArray(); Status='Malformed' }
+    }
+    $status = 'Complete'
+    foreach ($item in $raw) {
+        if ($null -eq $item -or ($item -isnot [System.Collections.IDictionary] -and $item -isnot [pscustomobject])) {
+            $status = 'Malformed'
+            continue
+        }
+        [void]$items.Add($item)
+    }
+    return [pscustomobject]@{ Items=$items.ToArray(); Status=$status }
+}
+function ConvertTo-SwpCredentialDate {
+    param($Value)
+    if ($Value -is [DateTimeOffset] -or $Value -is [datetime]) { return ConvertTo-SwpUtc $Value }
+    # Graph DateTimeOffset values carry a full ISO timestamp and offset. Never
+    # guess a date from an arbitrary string or stringify an unexpected object.
+    if ($Value -is [string] -and $Value -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$') {
+        return ConvertTo-SwpUtc $Value
+    }
+    return $null
+}
+function Get-SwpCredentialValidity {
+    param($Start, $End)
+    if ($null -eq $Start -or $null -eq $End) { return 'UnknownDates' }
+    if ($Start -ge $End) { return 'InvalidDateRange' }
+    if ($End -le $asOf) { return 'Expired' }
+    if ($Start -gt $asOf) { return 'NotYetValid' }
+    return 'WithinValidityPeriod'
+}
+function ConvertTo-SwpCustomIdentifier {
+    param($Value)
+    if ($null -eq $Value -or ($Value -is [string] -and [string]::IsNullOrWhiteSpace($Value))) {
+        return [pscustomobject]@{ Hex=$null; Status='Absent' }
+    }
+    $bytes = $null
+    try {
+        if ($Value -is [string]) {
+            # Graph's JSON binary encoding is base64, even when text looks like
+            # hexadecimal. Never guess the encoding from the characters alone.
+            $bytes = [Convert]::FromBase64String($Value)
+        } elseif ($Value -is [byte[]]) {
+            $bytes = $Value
+        } elseif ($Value -is [array]) {
+            $buffer = [System.Collections.Generic.List[byte]]::new()
+            foreach ($part in $Value) {
+                if (($part -isnot [byte] -and $part -isnot [int] -and $part -isnot [long]) -or $part -lt 0 -or $part -gt 255) { throw 'Invalid binary identifier.' }
+                [void]$buffer.Add([byte]$part)
+            }
+            $bytes = $buffer.ToArray()
+        } else { throw 'Unsupported identifier representation.' }
+        if ($bytes.Length -eq 0) { return [pscustomobject]@{ Hex=$null; Status='Absent' } }
+        return [pscustomobject]@{ Hex=[BitConverter]::ToString($bytes).Replace('-',''); Status='Decoded' }
+    } catch {
+        # Never echo the supplied value or exception: malformed input can contain
+        # unexpected data. This status is enough to show the loss of metadata.
+        return [pscustomobject]@{ Hex=$null; Status='Invalid' }
+    }
+}
+function Get-SwpCredentialMetadata {
+    param($Application)
+    $keys = Get-SwpCredentialCollection $Application 'keyCredentials'
+    $secrets = Get-SwpCredentialCollection $Application 'passwordCredentials'
+    $details = [System.Collections.Generic.List[object]]::new()
+    $limited = $false
+    $unknownKeyType = $false
+    $unknownValidity = $false
+    $certificateCount = 0
+    $otherKeyCount = 0
+    $expiredCount = 0
+    foreach ($source in @(@{ IsKey=$true; Collection=$keys }, @{ IsKey=$false; Collection=$secrets })) {
+        foreach ($credential in $source.Collection.Items) {
+            $kind = 'ClientSecret'
+            $keyType = $null
+            $keyUsage = $null
+            if ($source.IsKey) {
+                $rawType = Get-SwpValue $credential 'type'
+                if ($rawType -is [string] -and -not [string]::IsNullOrWhiteSpace($rawType)) { $keyType = $rawType }
+                else { $unknownKeyType = $true; $limited = $true }
+                $rawUsage = Get-SwpValue $credential 'usage'
+                if ($rawUsage -is [string] -and -not [string]::IsNullOrWhiteSpace($rawUsage)) { $keyUsage = $rawUsage }
+                else { $limited = $true }
+                if ($keyType -in @('AsymmetricX509Cert','X509Cert')) { $kind = 'Certificate'; $certificateCount++ }
+                else { $kind = 'OtherKey'; $otherKeyCount++ }
+            }
+            $rawName = Get-SwpValue $credential 'displayName'
+            $name = $null
+            if ($rawName -is [string]) { $name = $rawName }
+            elseif ($null -ne $rawName) { $limited = $true }
+            $rawId = Get-SwpValue $credential 'keyId'
+            $credentialId = $null
+            $idStatus = 'Missing'
+            if ($null -ne $rawId -and -not ($rawId -is [string] -and [string]::IsNullOrWhiteSpace($rawId))) {
+                $parsedId = [guid]::Empty
+                if (($rawId -is [string] -or $rawId -is [guid]) -and [guid]::TryParse([string]$rawId, [ref]$parsedId) -and $parsedId -ne [guid]::Empty) {
+                    $credentialId = $parsedId.ToString()
+                    $idStatus = 'Valid'
+                } else { $idStatus = 'Invalid' }
+            }
+            # Microsoft marks passwordCredential.customKeyIdentifier "Do not use".
+            # Ignore it even if returned; only key credentials have an identifier here.
+            $identifier = [pscustomobject]@{ Hex=$null; Status='NotApplicable' }
+            if ($source.IsKey) { $identifier = ConvertTo-SwpCustomIdentifier (Get-SwpValue $credential 'customKeyIdentifier') }
+            if ($idStatus -ne 'Valid' -or $identifier.Status -eq 'Invalid') { $limited = $true }
+            $validFrom = ConvertTo-SwpCredentialDate (Get-SwpValue $credential 'startDateTime')
+            $validUntil = ConvertTo-SwpCredentialDate (Get-SwpValue $credential 'endDateTime')
+            $validity = Get-SwpCredentialValidity -Start $validFrom -End $validUntil
+            $daysUntil = $null
+            if ($validity -in @('UnknownDates','InvalidDateRange')) { $unknownValidity = $true; $limited = $true }
+            else {
+                $daysUntil = [Math]::Round(($validUntil - $asOf).TotalDays, 2, [MidpointRounding]::AwayFromZero)
+                if ($validity -eq 'Expired') { $expiredCount++ }
+            }
+            # Explicit fields only. Do not serialize the credential object, key,
+            # secretText or hint, even when a test/response unexpectedly supplies it.
+            [void]$details.Add([pscustomobject][ordered]@{
+                AppName = Get-SwpValue $Application 'displayName'
+                ApplicationClientId = Get-SwpValue $Application 'appId'
+                ApplicationObjectId = Get-SwpValue $Application 'id'
+                CredentialKind = $kind
+                CredentialDescription = $name
+                CredentialId = $credentialId
+                StartDateTimeUtc = Format-SwpUtc $validFrom
+                EndDateTimeUtc = Format-SwpUtc $validUntil
+                DaysUntilExpiry = $daysUntil
+                ValidityStatus = $validity
+                KeyType = $keyType
+                KeyUsage = $keyUsage
+                CustomKeyIdentifierHex = $identifier.Hex
+                IdentifierStatus = "KeyId=$idStatus;CustomKeyIdentifier=$($identifier.Status)"
+                ReportAsOfUtc = Format-SwpUtc $asOf
+            })
+        }
+    }
+    $metadataStatus = 'Complete'
+    if ($keys.Status -eq 'Unavailable' -and $secrets.Status -eq 'Unavailable') { $metadataStatus = 'Unavailable' }
+    elseif ($keys.Status -ne 'Complete' -or $secrets.Status -ne 'Complete') { $metadataStatus = 'Incomplete' }
+    elseif ($limited) { $metadataStatus = 'LimitedDetails' }
+    $secretCount = $null
+    if ($secrets.Status -eq 'Complete') { $secretCount = $secrets.Items.Count }
+    if ($keys.Status -ne 'Complete' -or $unknownKeyType) { $certificateCount = $null; $otherKeyCount = $null }
+    if ($keys.Status -ne 'Complete' -or $secrets.Status -ne 'Complete' -or $unknownValidity) { $expiredCount = $null }
+    return [pscustomobject]@{
+        Rows=$details.ToArray(); CertificateCount=$certificateCount; ClientSecretCount=$secretCount
+        OtherKeyCredentialCount=$otherKeyCount; ExpiredCredentialCount=$expiredCount; CredentialMetadataStatus=$metadataStatus
+    }
+}
 if ($TenantId -eq [guid]::Empty) { throw 'TenantId cannot be empty.' }
 
 if (-not $PSBoundParameters.ContainsKey('DaysBack')) {
@@ -239,9 +444,11 @@ $asOf = [DateTimeOffset]::UtcNow
 $start = $asOf.AddDays(-([int]$DaysBack))
 Write-Host "UTC creation window: $($start.ToString('o')) through $($asOf.ToString('o'))"
 # Retrieve only relevant application properties; follow all application pages.
-$apps = Get-SwpPages 'https://graph.microsoft.com/v1.0/applications?$select=id,appId,displayName,createdDateTime,signInAudience,publisherDomain,description'
+$apps = Get-SwpPages 'https://graph.microsoft.com/v1.0/applications?$select=id,appId,displayName,createdDateTime,signInAudience,publisherDomain,description,keyCredentials,passwordCredentials'
 $missingDates = 0
 $warnings = 0
+$credentialWarnings = 0
+$credentialRows = [System.Collections.Generic.List[object]]::new()
 $rows = @(foreach ($app in $apps) {
     $created = ConvertTo-SwpUtc (Get-SwpValue $app 'createdDateTime')
     if ($null -eq $created) { $missingDates++; continue }
@@ -281,6 +488,9 @@ $rows = @(foreach ($app in $apps) {
     })
     if ($status -ne 'Complete') { $warnings++ }
     if ($status -eq 'LimitedDetails') { Write-Warning "Some owner details are unavailable for application $id; returned owner count retained." }
+    $credentialMetadata = Get-SwpCredentialMetadata $app
+    foreach ($credentialRow in $credentialMetadata.Rows) { [void]$credentialRows.Add($credentialRow) }
+    if ($credentialMetadata.CredentialMetadataStatus -ne 'Complete') { $credentialWarnings++ }
     [pscustomobject][ordered]@{
         AppName = Get-SwpValue $app 'displayName'
         ApplicationClientId = Get-SwpValue $app 'appId'
@@ -295,9 +505,17 @@ $rows = @(foreach ($app in $apps) {
         OwnerSummary = ConvertTo-Json -InputObject $details -Compress -Depth 4
         OwnerLookupStatus = $status
         ReportAsOfUtc = Format-SwpUtc $asOf
+        CertificateCount = $credentialMetadata.CertificateCount
+        ClientSecretCount = $credentialMetadata.ClientSecretCount
+        OtherKeyCredentialCount = $credentialMetadata.OtherKeyCredentialCount
+        ExpiredCredentialCount = $credentialMetadata.ExpiredCredentialCount
+        CredentialMetadataStatus = $credentialMetadata.CredentialMetadataStatus
     }
 })
-$columns = @('AppName','ApplicationClientId','ApplicationObjectId','ApplicationObjectType','CreatedDateTimeUtc','AgeDays','SignInAudience','PublisherDomain','Description','OwnerCount','OwnerSummary','OwnerLookupStatus','ReportAsOfUtc')
-$path = Export-SwpCsv -Rows $rows -Prefix 'Entra_AppRegistrations' -Columns $columns
+$columns = @('AppName','ApplicationClientId','ApplicationObjectId','ApplicationObjectType','CreatedDateTimeUtc','AgeDays','SignInAudience','PublisherDomain','Description','OwnerCount','OwnerSummary','OwnerLookupStatus','ReportAsOfUtc','CertificateCount','ClientSecretCount','OtherKeyCredentialCount','ExpiredCredentialCount','CredentialMetadataStatus')
+$credentialColumns = @('AppName','ApplicationClientId','ApplicationObjectId','CredentialKind','CredentialDescription','CredentialId','StartDateTimeUtc','EndDateTimeUtc','DaysUntilExpiry','ValidityStatus','KeyType','KeyUsage','CustomKeyIdentifierHex','IdentifierStatus','ReportAsOfUtc')
+$paths = Export-SwpReportPair -ApplicationRows $rows -CredentialRows $credentialRows.ToArray() -ApplicationColumns $columns -CredentialColumns $credentialColumns
 Write-Host "Applications scanned: $($apps.Count); matched: $($rows.Count); unusable dates excluded: $missingDates; owner lookup warnings: $warnings"
-Write-Host "Saved: $path"
+Write-Host "Credential rows: $($credentialRows.Count); applications with unavailable/incomplete credential metadata: $credentialWarnings"
+Write-Host "Saved: $($paths.ApplicationPath)"
+Write-Host "Saved: $($paths.CredentialPath)"
