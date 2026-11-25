@@ -13,10 +13,33 @@ and matching copy/download controls.
 | [Connect-SwpEntra.ps1](entra-id/Connect-SwpEntra.ps1) | Connect explicitly to the intended Entra tenant with selected delegated read scopes. | [Connect to Entra](https://shellweplay.vercel.app/scripts/entra-connect) | Preview; live tenant validation pending |
 | [Get-SwpEntraUser.ps1](entra-id/Get-SwpEntraUser.ps1) | Inspect one selected Entra user or an explicit bounded filter. | [Entra user details](https://shellweplay.vercel.app/scripts/entra-user) | Preview; live tenant validation pending |
 | [Get-SwpEntraGroupReport.ps1](entra-id/Get-SwpEntraGroupReport.ps1) | Report one group's visible owners and direct or flat transitive members. | [Entra group report](https://shellweplay.vercel.app/scripts/entra-group-report) | Preview; live tenant validation pending |
+| [Export-SwpEntraRecentAppRegistrations.ps1](entra-id/Export-SwpEntraRecentAppRegistrations.ps1) | Current applications registered in a UTC lookback window, with current owners and certificate/client-secret metadata in a companion CSV. | [Recent app registrations](https://shellweplay.vercel.app/scripts/entra-recent-app-registrations) | v1.1.0; lab validation pending |
+| [Export-SwpEntraPendingGuestInvitations.ps1](entra-id/Export-SwpEntraPendingGuestInvitations.ps1) | Current guests pending acceptance, with account/state dates and optional account age. | [Pending guest invitations](https://shellweplay.vercel.app/scripts/entra-pending-guest-invitations) | Lab validation pending |
 | [ShellWePlay.Prompt.ps1](powershell/ShellWePlay.Prompt.ps1) | Add a local date/time prompt to the current PowerShell session. | [Shell Lab](https://shellweplay.vercel.app/shell-lab) | Interactive Windows/terminal validation pending |
 
 Category documentation: [Active Directory](active-directory/README.md),
 [Entra ID](entra-id/README.md), and [PowerShell customization](powershell/README.md).
+
+## Improving an existing script
+
+Keep one maintained script for each operational question. Add related fields,
+filters, or output details to that script when its purpose and query scope remain
+the same. Create a separate script when the question or scope changes materially.
+For example, credential details belong in the recent app-registration report;
+finding credentials that expire soon across all applications would be a distinct
+report, because app creation age must not exclude older applications.
+
+Keep filenames stable. Record the version and revision notes in the complete
+script and use Git history to retain earlier revisions; do not create `_v2`,
+`_new`, or `_final` copies. Use patch versions for fixes, minor versions for
+compatible additions, and major versions for breaking parameter, output, or
+behavior changes with migration notes. Document any added CSV columns or files.
+
+Continue the existing PR while it is open. After it is merged, use a new focused
+PR against the same script. Each revision includes updated help, examples,
+meaningful offline checks, and the matching website guide and exact source pin.
+Keep lab-validation status explicit; passing mocked checks does not validate a
+script against a live directory.
 
 ## Read before running
 
