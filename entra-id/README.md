@@ -11,6 +11,9 @@ mocked Graph responses; it never connects to a tenant.
 | [Get-SwpEntraUser.ps1](Get-SwpEntraUser.ps1) | Selected user properties or an explicitly bounded filter. | [User guide](https://shellweplay.vercel.app/scripts/entra-user) |
 | [Get-SwpEntraGroupReport.ps1](Get-SwpEntraGroupReport.ps1) | Visible owners and direct or transitive members of one group. | [Group guide](https://shellweplay.vercel.app/scripts/entra-group-report) |
 
+| [Export-SwpEntraRecentAppRegistrations.ps1](Export-SwpEntraRecentAppRegistrations.ps1) | Current applications registered in a UTC lookback window, with current owners and lookup status. | [Recent app registrations](https://shellweplay.vercel.app/scripts/entra-recent-app-registrations) |
+| [Export-SwpEntraPendingGuestInvitations.ps1](Export-SwpEntraPendingGuestInvitations.ps1) | Current guests pending acceptance, with account/state dates and optional account age. | [Pending guest invitations](https://shellweplay.vercel.app/scripts/entra-pending-guest-invitations) |
+
 ## Prerequisites
 
 Use an approved test tenant/account, PowerShell 7, and the
@@ -64,3 +67,18 @@ See the embedded help and website guides for the complete parameters and limits,
 plus Microsoft's [Graph authentication documentation](https://learn.microsoft.com/en-us/powershell/microsoftgraph/authentication-commands),
 [member endpoint documentation](https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0),
 and [owner endpoint documentation](https://learn.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0).
+
+## November 25, 2026 reports — lab validation pending
+
+Use an existing protected Reports folder in a dedicated PowerShell 7 process. Example GUID and operator domain mylab.dev are fictional. Replace them locally; review approved consent before connecting. The two reports never connect themselves.
+
+```powershell
+Connect-MgGraph -TenantId '11111111-1111-4111-8111-111111111111' -Scopes 'Application.Read.All','User.ReadBasic.All' -ContextScope Process
+./entra-id/Export-SwpEntraRecentAppRegistrations.ps1 -TenantId '11111111-1111-4111-8111-111111111111' -DaysBack 30 -CsvDirectory './Reports'
+Disconnect-MgGraph
+Connect-MgGraph -TenantId '11111111-1111-4111-8111-111111111111' -Scopes 'User.Read.All' -ContextScope Process
+./entra-id/Export-SwpEntraPendingGuestInvitations.ps1 -TenantId '11111111-1111-4111-8111-111111111111' -MinimumAccountAgeDays 30 -CsvDirectory './Reports'
+Disconnect-MgGraph
+```
+
+The app report prompts when DaysBack is omitted. It scans current applications, not deleted objects, and includes derived types. Owners are current metadata, not creators. A failed owner lookup does not count as zero; known IDs/types survive a later-page failure. The guest report selects Guest objects and checks PendingAcceptance, not invitation send time or proof of never redeeming. MinimumAccountAgeDays defaults to zero, including unknown creation ages. Both reports follow all returned pages within explicit bounds; a failed main collection aborts. CSV uses UTC date, no overwrite, [null] for unavailable cells, and formula protection. Neither report collects credentials, audit logs, or sign-ins. Graph visibility and eventual consistency still apply; no additional license-dependent API requested. See embedded help for Microsoft references and parameters. Website guides are proposed separately and are not live yet.
