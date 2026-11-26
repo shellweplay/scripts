@@ -69,3 +69,10 @@ live AD testing remain pending. The status beside each script stays explicit unt
 real environment results are recorded.
 
 New categories will be added with their first published script.
+
+## November 26 identity reports
+
+| Script | Purpose | Guide | Validation |
+| --- | --- | --- | --- |
+| [Export-SwpADExpiringUserAccounts.ps1](active-directory/Export-SwpADExpiringUserAccounts.ps1) | Upcoming AD account expiration in a selected OU; not password expiry. | [AD account expiration](https://shellweplay.vercel.app/scripts/ad-expiring-user-accounts) | Lab validation pending |
+| [Export-SwpEntraAppCredentialExpiry.ps1](entra-id/Export-SwpEntraAppCredentialExpiry.ps1) | Credential validity-end window across all visible current app registrations, regardless of creation date. | [Entra app credential expiry](https://shellweplay.vercel.app/scripts/entra-app-credential-expiry) | Lab validation pending |
