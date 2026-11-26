@@ -64,3 +64,21 @@ See the embedded help and website guides for the complete parameters and limits,
 plus Microsoft's [Graph authentication documentation](https://learn.microsoft.com/en-us/powershell/microsoftgraph/authentication-commands),
 [member endpoint documentation](https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0),
 and [owner endpoint documentation](https://learn.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0).
+## November 2026 launch reports
+
+Each Entra report requires explicitly approved object IDs and a verified delegated Graph context in the specified tenant. Reports are read-only and export selected status fields to local CSV.
+
+| Script | Purpose | Website guide |
+| --- | --- | --- |
+| [`Export-SwpEntraRosterAccountState.ps1`](Export-SwpEntraRosterAccountState.ps1) | Check the reported enabled state for a selected onboarding, transfer, or offboarding roster. | [Guide](https://shellweplay.vercel.app/scripts/entra-roster-account-state) |
+| [`Export-SwpEntraOrganizationProfileGaps.ps1`](Export-SwpEntraOrganizationProfileGaps.ps1) | Find missing department, job title, and office fields on a known roster without copying field values. | [Guide](https://shellweplay.vercel.app/scripts/entra-organization-profile-gaps) |
+| [`Export-SwpEntraPrimaryMailReview.ps1`](Export-SwpEntraPrimaryMailReview.ps1) | Review whether the Graph mail field is populated and how it compares with the sign-in name, without exporting either value. | [Guide](https://shellweplay.vercel.app/scripts/entra-primary-mail-review) |
+| [`Export-SwpEntraUsageLocationReadiness.ps1`](Export-SwpEntraUsageLocationReadiness.ps1) | Check whether selected users have a usage location in the expected two-letter form before a licensing review. | [Guide](https://shellweplay.vercel.app/scripts/entra-usage-location-readiness) |
+| [`Export-SwpEntraLicenseAssignmentPresence.ps1`](Export-SwpEntraLicenseAssignmentPresence.ps1) | See whether Graph reports any assigned license SKU for each selected user before investigating entitlement or onboarding gaps. | [Guide](https://shellweplay.vercel.app/scripts/entra-license-assignment-presence) |
+| [`Export-SwpEntraHybridSyncFreshness.ps1`](Export-SwpEntraHybridSyncFreshness.ps1) | Review the last recorded sync timestamp for selected hybrid users against a configurable elapsed-day threshold. | [Guide](https://shellweplay.vercel.app/scripts/entra-hybrid-sync-freshness) |
+| [`Export-SwpEntraPreferredLanguageReadiness.ps1`](Export-SwpEntraPreferredLanguageReadiness.ps1) | Check if the preferredLanguage field is populated before planning communications to a selected roster. | [Guide](https://shellweplay.vercel.app/scripts/entra-preferred-language-readiness) |
+| [`Export-SwpEntraGroupDocumentationGaps.ps1`](Export-SwpEntraGroupDocumentationGaps.ps1) | Check selected groups for missing descriptions or names without exposing the contents of either. | [Guide](https://shellweplay.vercel.app/scripts/entra-group-documentation-gaps) |
+| [`Export-SwpEntraGroupMailReadiness.ps1`](Export-SwpEntraGroupMailReadiness.ps1) | Cross-check mailEnabled and mail field presence for selected groups before handing off an email-address review. | [Guide](https://shellweplay.vercel.app/scripts/entra-group-mail-readiness) |
+| [`Export-SwpEntraGroupExpirationReview.ps1`](Export-SwpEntraGroupExpirationReview.ps1) | Check the policy-reported expiry of selected Microsoft 365 groups against a configurable review window. | [Guide](https://shellweplay.vercel.app/scripts/entra-group-expiration-review) |
+
+Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
