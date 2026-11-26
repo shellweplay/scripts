@@ -116,3 +116,15 @@ Run from the repository root, replacing these `mylab.dev` examples with your lab
 The result contains `Server`, `SearchBase`, `Security`, `Distribution`, `Total`, `StartedAt`, `CompletedAt`, and `ElapsedSeconds`. A query failure or unexpected group category aborts the result, so partial counts are not reported as complete.
 
 Counts cover readable groups within the chosen scope during the query. They are not a forest-wide or atomic snapshot. The script makes no AD changes, but large reads consume domain-controller resources; begin with a small lab OU.
+
+## Upcoming AD user-account expiration (v1.0.0)
+
+[Export-SwpADExpiringUserAccounts.ps1](Export-SwpADExpiringUserAccounts.ps1) is a read-only Windows PowerShell 5.1/RSAT report using the current Windows identity and a caller-selected DC FQDN and OU DN. It uses the raw accountExpires FILETIME filter and rechecks returned dates. Zero and Int64.MaxValue mean never expires. Already-expired accounts are outside this future window; this is not password expiration or a sign-in test. Lab validation pending.
+
+```powershell
+.\active-directory\Export-SwpADExpiringUserAccounts.ps1 -Server 'dc01.mylab.dev' -SearchBase 'OU=Lab,DC=mylab,DC=dev' -DaysAhead 30 -CsvDirectory 'C:\Reports'
+```
+
+Defaults: 30 days, Subtree, both enabled and disabled. Optional EnabledOnly, OneLevel, MaxRecords and PageSize. The dated UTF-8 AD_ExpiringUserAccounts_yyyy-MM-dd.csv is created only after the query completes, never overwritten, and header-only if empty. Fields and limitations are in the script help; all dates use UTC, days are fractional. A bound exceeded or invalid returned candidate fails the report. The report cannot see unreadable attributes and is not a forest inventory. Validate known expiration dates (including both never-expire sentinels), OU scope and disabled accounts in a lab.
+
+Reference: [accountExpires](https://learn.microsoft.com/en-us/windows/win32/adschema/a-accountexpires) and [Get-ADUser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduser).
