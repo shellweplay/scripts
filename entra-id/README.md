@@ -151,3 +151,16 @@ tenant permissions or service behavior. Microsoft's
 [keyCredential](https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0),
 and [passwordCredential](https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0)
 documentation describe the source fields and limits.
+
+## App credential expiration across current registrations (v1.0.0)
+
+[Export-SwpEntraAppCredentialExpiry.ps1](Export-SwpEntraAppCredentialExpiry.ps1) is distinct from the recent registration report: an older app can have a credential expiring tomorrow. It follows all visible application list pages, uses only delegated Application.Read.All, includes certificates/client secrets/other keys, and does not read owners, sign-ins, audit logs or enterprise application service principals. Lab validation pending.
+
+```powershell
+Connect-MgGraph -TenantId '11111111-1111-4111-8111-111111111111' -Scopes 'Application.Read.All' -ContextScope Process
+./entra-id/Export-SwpEntraAppCredentialExpiry.ps1 -TenantId '11111111-1111-4111-8111-111111111111' -DaysAhead 30 -IncludeExpired -CsvDirectory './Reports'
+```
+
+The fictional mylab.dev tenant GUID must be replaced locally. Default: future 30-day validity-end window; IncludeExpired also includes already-expired credentials. Unknown/invalid dates are retained regardless of window. CoverageWarning rows distinguish unavailable, incomplete and limited metadata; they are not credentials. One dated Entra_AppCredentialExpiry_yyyy-MM-dd.csv, UTF-8, never overwrites, header-only if no rows. See complete help for columns and bounds. The Graph collection endpoint returns metadata; raw certificate data is only available through a single-object selection, which is not used. Secret hints and secret values are never exported. Credential validity is not application usage, health, or upload time; a custom identifier is not a verified thumbprint. Current application objects only, including derived types; not an atomic snapshot or a full workload identity inventory. Validate known expiry dates, permissions and coverage warnings in a lab.
+
+References: [List applications](https://learn.microsoft.com/en-us/graph/api/application-list?view=graph-rest-1.0), [keyCredential](https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0), [passwordCredential](https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0).
