@@ -116,3 +116,21 @@ Run from the repository root, replacing these `mylab.dev` examples with your lab
 The result contains `Server`, `SearchBase`, `Security`, `Distribution`, `Total`, `StartedAt`, `CompletedAt`, and `ElapsedSeconds`. A query failure or unexpected group category aborts the result, so partial counts are not reported as complete.
 
 Counts cover readable groups within the chosen scope during the query. They are not a forest-wide or atomic snapshot. The script makes no AD changes, but large reads consume domain-controller resources; begin with a small lab OU.
+## November 2026 launch reports
+
+Each AD report requires one explicit, approved OU. One-level search is the default; subtree is opt-in. Reports use delegated read permissions and export local aggregates, not individual account identifiers.
+
+| Script | Purpose | Website guide |
+| --- | --- | --- |
+| [`Export-SwpADProfileCompleteness.ps1`](Export-SwpADProfileCompleteness.ps1) | Count populated department, office, title, and company fields for visible user objects in an OU. | [Guide](https://shellweplay.vercel.app/scripts/ad-profile-completeness) |
+| [`Export-SwpADGroupDocumentationCoverage.ps1`](Export-SwpADGroupDocumentationCoverage.ps1) | Count how many visible groups have a description and a managed-by reference, without exposing either field. | [Guide](https://shellweplay.vercel.app/scripts/ad-group-documentation-coverage) |
+| [`Export-SwpADAccountStateTotals.ps1`](Export-SwpADAccountStateTotals.ps1) | Summarize enabled, disabled, and unknown states for visible user objects in an OU. | [Guide](https://shellweplay.vercel.app/scripts/ad-account-state-totals) |
+| [`Export-SwpADAccountCreationTrend.ps1`](Export-SwpADAccountCreationTrend.ps1) | Count currently visible accounts by UTC creation month within a configurable recent window. | [Guide](https://shellweplay.vercel.app/scripts/ad-account-creation-trend) |
+| [`Export-SwpADAccountExpiryBuckets.ps1`](Export-SwpADAccountExpiryBuckets.ps1) | Bucket visible user objects by configured AD account-expiration time, without exposing identities. | [Guide](https://shellweplay.vercel.app/scripts/ad-account-expiry-buckets) |
+| [`Export-SwpADDepartmentDistribution.ps1`](Export-SwpADDepartmentDistribution.ps1) | Count visible users mapped to administrator-supplied department labels; all other values stay aggregated. | [Guide](https://shellweplay.vercel.app/scripts/ad-department-distribution) |
+| [`Export-SwpADOfficeDistribution.ps1`](Export-SwpADOfficeDistribution.ps1) | Count visible users mapped to administrator-supplied office labels; all other values stay aggregated. | [Guide](https://shellweplay.vercel.app/scripts/ad-office-distribution) |
+| [`Export-SwpADDuplicateMailCounts.ps1`](Export-SwpADDuplicateMailCounts.ps1) | Count duplicates in the visible mail field without revealing any values or account identities. | [Guide](https://shellweplay.vercel.app/scripts/ad-duplicate-mail-counts) |
+| [`Export-SwpADDuplicateEmployeeIdCounts.ps1`](Export-SwpADDuplicateEmployeeIdCounts.ps1) | Count duplicates in the visible employee ID field without revealing any values or account identities. | [Guide](https://shellweplay.vercel.app/scripts/ad-duplicate-employee-id-counts) |
+| [`Export-SwpADEmployeeTypeCoverage.ps1`](Export-SwpADEmployeeTypeCoverage.ps1) | Measure how many user objects have a known, other, or unspecified employee classification against an approved list. | [Guide](https://shellweplay.vercel.app/scripts/ad-employee-type-coverage) |
+
+Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
