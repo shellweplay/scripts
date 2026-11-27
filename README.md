@@ -77,3 +77,20 @@ Ten on-prem AD and ten Entra identity reports focused on operational data qualit
 Offline verification: run `pwsh -NoProfile -File ./tests/Invoke-SwpADReportFixtureTests.ps1` and `pwsh -NoProfile -File ./tests/Invoke-SwpEntraReportFixtureTests.ps1` from the repository root. The fixtures do not connect to real AD or Graph. Windows RSAT, Windows PowerShell 5.1, and live directory validation remain pending.
 
 Keep filenames stable. Extend an existing script when the operational question stays the same; use a new filename only for a materially different question or scope. Review complete source and check results before running in a live environment.
+
+## Read-only reporting utilities
+
+All examples use fictional values. Nothing uploads a file or changes a directory.
+Run in an authorized lab first and keep local exports access-controlled.
+
+| Source | Use |
+| --- | --- |
+| [Export-SwpADUserRosterStatus.ps1](active-directory/Export-SwpADUserRosterStatus.ps1) | Distinguish enabled, disabled, not visible in scope, and failed lookups for accounts supplied in a text file. |
+| [Export-SwpADAdminCountReview.ps1](active-directory/Export-SwpADAdminCountReview.ps1) | Review adminCount flags using only a supplied roster and approved group DNs or SIDs; never infer that a flag is safe to clear. |
+| [Find-SwpADGroupsByNote.ps1](active-directory/Find-SwpADGroupsByNote.ps1) | Match literal text in AD group Notes without exporting the Notes field. |
+| [Export-SwpADGroupAttributes.ps1](active-directory/Export-SwpADGroupAttributes.ps1) | Export standard group metadata for expressly selected OUs; Notes are optional. |
+| [Export-SwpMatchingCsvRows.ps1](powershell/Export-SwpMatchingCsvRows.ps1) | Combine matching rows from same-schema local CSVs with source filenames. |
+| [Find-SwpADGroupMemberAdditions.spl](splunk/Find-SwpADGroupMemberAdditions.spl) | Splunk recipe for Windows event 4728 using an approved group SID lookup. See [setup](splunk/README.md). |
+
+Run the five offline PowerShell fixtures with `pwsh -NoProfile -File ./tests/Invoke-SwpUtilityFixtureTests.ps1`.
+No live AD or Splunk validation is claimed. The SPL recipe is not PowerShell.
