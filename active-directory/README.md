@@ -134,3 +134,11 @@ Each AD report requires one explicit, approved OU. One-level search is the defau
 | [`Export-SwpADEmployeeTypeCoverage.ps1`](Export-SwpADEmployeeTypeCoverage.ps1) | Measure how many user objects have a known, other, or unspecified employee classification against an approved list. | [Guide](https://shellweplay.vercel.app/scripts/ad-employee-type-coverage) |
 
 Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
+
+## Password-never-expires flag totals (v1.0.0)
+
+[Export-SwpADPasswordNeverExpiresTotals.ps1](Export-SwpADPasswordNeverExpiresTotals.ps1) counts the flag by NeverExpires, FlagNotSet and Unknown, including disabled users. It is not an effective password-expiry or compliance report. No account identifiers are exported. Lab validation pending.
+
+```powershell
+./Export-SwpADPasswordNeverExpiresTotals.ps1 -SearchBase 'OU=Lab,DC=mylab,DC=dev' -Server 'dc01.mylab.dev' -OutputDirectory './Reports'
+```

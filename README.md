@@ -77,3 +77,12 @@ Ten on-prem AD and ten Entra identity reports focused on operational data qualit
 Offline verification: run `pwsh -NoProfile -File ./tests/Invoke-SwpADReportFixtureTests.ps1` and `pwsh -NoProfile -File ./tests/Invoke-SwpEntraReportFixtureTests.ps1` from the repository root. The fixtures do not connect to real AD or Graph. Windows RSAT, Windows PowerShell 5.1, and live directory validation remain pending.
 
 Keep filenames stable. Extend an existing script when the operational question stays the same; use a new filename only for a materially different question or scope. Review complete source and check results before running in a live environment.
+
+## November 27, 2026 reports
+
+| Script | Purpose | Website guide | Validation |
+| --- | --- | --- | --- |
+| [Export-SwpADPasswordNeverExpiresTotals.ps1](active-directory/Export-SwpADPasswordNeverExpiresTotals.ps1) | Count the password-never-expires flag in an authorized OU. | [Guide](https://shellweplay.vercel.app/scripts/ad-password-never-expires-totals) | Lab validation pending |
+| [Export-SwpEntraEmployeeIdCoverage.ps1](entra-id/Export-SwpEntraEmployeeIdCoverage.ps1) | Check employee ID field presence for an approved roster without exporting values. | [Guide](https://shellweplay.vercel.app/scripts/entra-employee-id-coverage) | Lab validation pending |
+
+Run the existing offline fixture suites above. No live lab results yet.

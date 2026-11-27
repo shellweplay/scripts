@@ -64,19 +64,19 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
     $global:SwpAdLastQuery = $null
     $global:SwpAdUsers = @(
         [pscustomobject]@{
-            Enabled = $true; whenCreated = $utcNow
+            Enabled = $true; PasswordNeverExpires = $true; whenCreated = $utcNow
             AccountExpirationDate = $utcNow.AddDays(-1); accountExpires = 12345L
             Department = ' Lab North '; Office = '=1+1'; Title = 'Tech'; Company = 'Lab'
             mail = ' hidden@example.test '; EmployeeID = '-secret1'; employeeType = 'Employee'
         }
         [pscustomobject]@{
-            Enabled = $false; whenCreated = $utcNow.AddYears(-2)
+            Enabled = $false; PasswordNeverExpires = $true; whenCreated = $utcNow.AddYears(-2)
             AccountExpirationDate = $utcNow.AddDays(2); accountExpires = 12346L
             Department = 'lab north'; Office = 'Annex'; Title = ' '; Company = 'Lab'
             mail = 'HIDDEN@example.test'; EmployeeID = ' -SECRET1 '; employeeType = 'Temp'
         }
         [pscustomobject]@{
-            Enabled = $true; whenCreated = $utcNow.AddDays(70)
+            Enabled = $true; PasswordNeverExpires = $false; whenCreated = $utcNow.AddDays(70)
             AccountExpirationDate = $utcNow.AddDays(70); accountExpires = 12347L
             Department = 'Another'; Office = '=1+1'; Title = 'Temp'; Company = ' '
             mail = 'else@example.test'; EmployeeID = '001'; employeeType = ' contractor '
@@ -93,7 +93,7 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
         AccountCreationTrend = 6; AccountExpiryBuckets = 5; AccountStateTotals = 3
         DepartmentDistribution = 4; DuplicateEmployeeIdCounts = 1; DuplicateMailCounts = 1
         EmployeeTypeCoverage = 3; GroupDocumentationCoverage = 2; OfficeDistribution = 4
-        ProfileCompleteness = 4
+        ProfileCompleteness = 4; PasswordNeverExpiresTotals = 3
     }
     foreach ($name in ($expected.Keys | Sort-Object)) {
         $fileName = Join-Path $SourceDirectory ('Export-SwpAD' + $name + '.ps1')
@@ -143,6 +143,12 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
                 foreach ($bucket in @('Expired','DueWithinWindow','Later','NoExpiryOrNotVisible','Unknown')) {
                     Assert-Bucket $rows Bucket $bucket 1
                 }
+            }
+            'PasswordNeverExpiresTotals' {
+                Assert-Bucket $rows State NeverExpires 2
+                Assert-Bucket $rows State FlagNotSet 1
+                Assert-Bucket $rows State Unknown 2
+                Assert-Equal ($global:SwpAdLastQuery['Properties'] -join ',') 'PasswordNeverExpires' 'Explicit flag selection'
             }
             'AccountStateTotals' {
                 Assert-Bucket $rows State Enabled 2
