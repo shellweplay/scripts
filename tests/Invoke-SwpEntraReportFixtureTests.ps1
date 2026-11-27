@@ -52,6 +52,7 @@ function Invoke-SwpCase {
     Assert-SwpEqual $rows[0].ObjectId $id.ToString() "$Report object ID"
     foreach ($key in $Expected.Keys) { Assert-SwpEqual ($rows[0].$key) $Expected[$key] "$Report / $key" }
     if ($rows[0].ReportAsOfUtc -notmatch '\+00:00$') { throw 'Expected UTC report timestamp.' }
+    if ($Report -eq 'EmployeeIdCoverage' -and (Get-Content -LiteralPath $summary.CsvPath -Raw) -match 'PRIVATE_FIXTURE') { throw 'Employee ID leaked into CSV.' }
     Remove-Item -LiteralPath $summary.CsvPath
 }
 function Assert-SwpRejected {
@@ -67,7 +68,7 @@ function Assert-SwpRejected {
 try {
     $scripts = @(Get-ChildItem -LiteralPath $SourceDirectory -Filter 'Export-SwpEntra*.ps1' | Where-Object Name -notin @(
         'Export-SwpEntraRecentAppRegistrations.ps1', 'Export-SwpEntraPendingGuestInvitations.ps1'))
-    Assert-SwpEqual $scripts.Count 10 'Number of new standalone script files'
+    Assert-SwpEqual $scripts.Count 11 'Number of new standalone script files'
     foreach ($file in $scripts) {
         $tokens = $null; $errors = $null
         [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
@@ -93,6 +94,10 @@ try {
         LastSyncUtc = ''; ElapsedDays = ''; SyncReview = 'Timestamp unavailable' }
     Invoke-SwpCase PreferredLanguageReadiness users @{ preferredLanguage = [string]([char]9) + '=2+2' } @{
         PreferredLanguage = "'" + [char]9 + '=2+2'; LanguageReview = 'Present' }
+    Invoke-SwpCase EmployeeIdCoverage users @{ employeeId = '=PRIVATE_FIXTURE' } @{ EmployeeIdReview = 'Present' }
+    Invoke-SwpCase EmployeeIdCoverage users @{ employeeId = ' ' } @{ EmployeeIdReview = 'Missing or unreturned' }
+    Invoke-SwpCase EmployeeIdCoverage users @{} @{ EmployeeIdReview = 'Missing or unreturned' }
+    Invoke-SwpCase EmployeeIdCoverage users @{ employeeId = 123 } @{ EmployeeIdReview = 'Unexpected type' }
     Invoke-SwpCase GroupDocumentationGaps groups @{ displayName = 'Example'; description = '' } @{
         NameField = 'Present'; DescriptionField = 'Blank or unreturned' }
     Invoke-SwpCase GroupMailReadiness groups @{ mailEnabled = $true; mail = ' ' } @{ MailState = 'Mail-enabled'; MailReview = 'Review mail field' }
@@ -119,7 +124,7 @@ try {
     $global:SwpBatchTestWrongId = $id2.ToString()
     Assert-SwpRejected { & $roster -TenantId $tenant -ObjectId $id -CsvDirectory $out } '*did not return the expected ID*' 1
 
-    Write-Host 'Entra identity batch: 10 parser checks, 18 report cases, and 6 guarded-failure cases passed; no network.'
+    Write-Host 'Entra identity batch: 11 parser checks, 22 report cases, and 6 guarded-failure cases passed; no network.'
 }
 finally {
     Remove-Item -LiteralPath $out -Recurse -Force

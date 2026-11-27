@@ -82,3 +82,12 @@ Each Entra report requires explicitly approved object IDs and a verified delegat
 | [`Export-SwpEntraGroupExpirationReview.ps1`](Export-SwpEntraGroupExpirationReview.ps1) | Check the policy-reported expiry of selected Microsoft 365 groups against a configurable review window. | [Guide](https://shellweplay.vercel.app/scripts/entra-group-expiration-review) |
 
 Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
+
+## Employee ID coverage (v1.0.0)
+
+[Export-SwpEntraEmployeeIdCoverage.ps1](Export-SwpEntraEmployeeIdCoverage.ps1) reads employeeId only for 1–250 approved user GUIDs with delegated User.Read.All and exports ObjectId, EmployeeIdReview and ReportAsOfUtc. The value itself is never exported. Presence is not proof of HR accuracy or uniqueness. Lab validation pending.
+
+```powershell
+Connect-MgGraph -TenantId '11111111-1111-4111-8111-111111111111' -Scopes 'User.Read.All' -ContextScope Process -Environment Global
+./Export-SwpEntraEmployeeIdCoverage.ps1 -TenantId '11111111-1111-4111-8111-111111111111' -ObjectId '22222222-2222-4222-8222-222222222222' -CsvDirectory './Reports'
+```

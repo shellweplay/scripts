@@ -94,3 +94,12 @@ Run in an authorized lab first and keep local exports access-controlled.
 
 Run the five offline PowerShell fixtures with `pwsh -NoProfile -File ./tests/Invoke-SwpUtilityFixtureTests.ps1`.
 No live AD or Splunk validation is claimed. The SPL recipe is not PowerShell.
+
+## November 27, 2026 reports
+
+| Script | Purpose | Website guide | Validation |
+| --- | --- | --- | --- |
+| [Export-SwpADPasswordNeverExpiresTotals.ps1](active-directory/Export-SwpADPasswordNeverExpiresTotals.ps1) | Count the password-never-expires flag in an authorized OU. | [Guide](https://shellweplay.vercel.app/scripts/ad-password-never-expires-totals) | Lab validation pending |
+| [Export-SwpEntraEmployeeIdCoverage.ps1](entra-id/Export-SwpEntraEmployeeIdCoverage.ps1) | Check employee ID field presence for an approved roster without exporting values. | [Guide](https://shellweplay.vercel.app/scripts/entra-employee-id-coverage) | Lab validation pending |
+
+Run the existing offline fixture suites above. No live lab results yet.

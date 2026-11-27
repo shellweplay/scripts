@@ -146,3 +146,11 @@ A report covers only the selected server and visible objects. It is not authoriz
 - [Group attributes](Export-SwpADGroupAttributes.ps1): one or more OUs, standard schema only, overlapping results deduplicated. Add `-IncludeNotes` only when the report is approved to include that text.
 
 Output is confidential. For machine joins, note that formula-like text is prefixed with an apostrophe for safer spreadsheet handling. Keep lab validation separate from offline fixture results.
+
+## Password-never-expires flag totals (v1.0.0)
+
+[Export-SwpADPasswordNeverExpiresTotals.ps1](Export-SwpADPasswordNeverExpiresTotals.ps1) counts the flag by NeverExpires, FlagNotSet and Unknown, including disabled users. It is not an effective password-expiry or compliance report. No account identifiers are exported. Lab validation pending.
+
+```powershell
+./Export-SwpADPasswordNeverExpiresTotals.ps1 -SearchBase 'OU=Lab,DC=mylab,DC=dev' -Server 'dc01.mylab.dev' -OutputDirectory './Reports'
+```
