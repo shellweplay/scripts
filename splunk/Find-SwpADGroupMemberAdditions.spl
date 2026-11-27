@@ -1,0 +1,6 @@
+index=example_windows_security sourcetype="XmlWinEventLog:Security" EventCode=4728 earliest=-24h latest=now
+| rename TargetSid AS group_sid
+| where isnotnull(group_sid)
+| lookup example_ad_group_watchlist.csv group_sid OUTPUT watch_label
+| where isnotnull(watch_label) AND len(watch_label)>0
+| table _time host group_sid watch_label TargetUserName MemberSid SubjectUserName

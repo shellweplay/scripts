@@ -1,0 +1,14 @@
+name: Utility fixtures
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  powershell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: ./tests/Invoke-SwpUtilityFixtureTests.ps1

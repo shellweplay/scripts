@@ -135,6 +135,18 @@ Each AD report requires one explicit, approved OU. One-level search is the defau
 
 Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
 
+## Targeted reporting utilities
+
+Use a known, authorized domain controller and explicitly approved inputs. Use a new output path for each run.
+A report covers only the selected server and visible objects. It is not authorization to change anything.
+
+- [Roster status](Export-SwpADUserRosterStatus.ps1): one sAMAccountName per text line; bounded batch size; “NotFound” applies to the selected search base, while “LookupFailed” means the query did not complete.
+- [adminCount review](Export-SwpADAdminCountReview.ps1): a CSV with a SamAccountName header and approved group DNs or SIDs. Recursive comparison can include nested members, but a non-match is not an effective-permissions or AdminSDHolder assessment.
+- [Group Notes search](Find-SwpADGroupsByNote.ps1): literal substring query within an OU; exports matching group names and timestamps, not Notes.
+- [Group attributes](Export-SwpADGroupAttributes.ps1): one or more OUs, standard schema only, overlapping results deduplicated. Add `-IncludeNotes` only when the report is approved to include that text.
+
+Output is confidential. For machine joins, note that formula-like text is prefixed with an apostrophe for safer spreadsheet handling. Keep lab validation separate from offline fixture results.
+
 ## Password-never-expires flag totals (v1.0.0)
 
 [Export-SwpADPasswordNeverExpiresTotals.ps1](Export-SwpADPasswordNeverExpiresTotals.ps1) counts the flag by NeverExpires, FlagNotSet and Unknown, including disabled users. It is not an effective password-expiry or compliance report. No account identifiers are exported. Lab validation pending.
