@@ -146,3 +146,7 @@ A report covers only the selected server and visible objects. It is not authoriz
 - [Group attributes](Export-SwpADGroupAttributes.ps1): one or more OUs, standard schema only, overlapping results deduplicated. Add `-IncludeNotes` only when the report is approved to include that text.
 
 Output is confidential. For machine joins, note that formula-like text is prefixed with an apostrophe for safer spreadsheet handling. Keep lab validation separate from offline fixture results.
+
+## Manager reference coverage
+
+[Export-SwpADManagerReferenceCoverage.ps1](Export-SwpADManagerReferenceCoverage.ps1) counts nonblank and missing/unreturned manager references among visible user objects. Windows PowerShell 5.1, RSAT and OU/attribute read access required. OneLevel by default; Subtree is explicit. Use `-SearchBase 'OU=Lab,DC=mylab,DC=dev' -Server 'dc01.mylab.dev' -OutputDirectory './Reports'` with an existing folder. Local UTF-8 timestamped CSV: Field, Present, MissingOrNotVisible, Total. No manager resolution or actual manager DNs exported. Presence is not proof of reporting accuracy. Lab validation pending.

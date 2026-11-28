@@ -52,6 +52,7 @@ function Invoke-SwpCase {
     Assert-SwpEqual $rows[0].ObjectId $id.ToString() "$Report object ID"
     foreach ($key in $Expected.Keys) { Assert-SwpEqual ($rows[0].$key) $Expected[$key] "$Report / $key" }
     if ($rows[0].ReportAsOfUtc -notmatch '\+00:00$') { throw 'Expected UTC report timestamp.' }
+    if ($Report -eq 'HybridLinkCoverage' -and (Get-Content -LiteralPath $summary.CsvPath -Raw) -match 'fictional-anchor') { throw 'Anchor leaked.' }
     Remove-Item -LiteralPath $summary.CsvPath
 }
 function Assert-SwpRejected {
@@ -67,7 +68,7 @@ function Assert-SwpRejected {
 try {
     $scripts = @(Get-ChildItem -LiteralPath $SourceDirectory -Filter 'Export-SwpEntra*.ps1' | Where-Object Name -notin @(
         'Export-SwpEntraRecentAppRegistrations.ps1', 'Export-SwpEntraPendingGuestInvitations.ps1'))
-    Assert-SwpEqual $scripts.Count 10 'Number of new standalone script files'
+    Assert-SwpEqual $scripts.Count 11 'Number of new standalone script files'
     foreach ($file in $scripts) {
         $tokens = $null; $errors = $null
         [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
@@ -91,6 +92,14 @@ try {
         SyncState = 'Currently synced'; LastSyncUtc = '2020-01-01T00:00:00.0000000+00:00'; SyncReview = 'Review age' }
     Invoke-SwpCase HybridSyncFreshness users @{ onPremisesSyncEnabled = $true; onPremisesLastSyncDateTime = 'not-a-date' } @{
         LastSyncUtc = ''; ElapsedDays = ''; SyncReview = 'Timestamp unavailable' }
+    Invoke-SwpCase HybridLinkCoverage users @{ onPremisesSyncEnabled = $true; onPremisesImmutableId = 'fictional-anchor' } @{
+        SyncState = 'Currently synced'; ImmutableIdReview = 'Present' }
+    Invoke-SwpCase HybridLinkCoverage users @{ onPremisesSyncEnabled = $false; onPremisesImmutableId = ' ' } @{
+        SyncState = 'Not currently synced'; ImmutableIdReview = 'Blank or unreturned' }
+    Invoke-SwpCase HybridLinkCoverage users @{ onPremisesSyncEnabled = 'true'; onPremisesImmutableId = 123 } @{
+        SyncState = 'Not reported or invalid'; ImmutableIdReview = 'Unexpected type' }
+    Invoke-SwpCase HybridLinkCoverage users @{} @{
+        SyncState = 'Not reported or invalid'; ImmutableIdReview = 'Blank or unreturned' }
     Invoke-SwpCase PreferredLanguageReadiness users @{ preferredLanguage = [string]([char]9) + '=2+2' } @{
         PreferredLanguage = "'" + [char]9 + '=2+2'; LanguageReview = 'Present' }
     Invoke-SwpCase GroupDocumentationGaps groups @{ displayName = 'Example'; description = '' } @{
@@ -119,7 +128,7 @@ try {
     $global:SwpBatchTestWrongId = $id2.ToString()
     Assert-SwpRejected { & $roster -TenantId $tenant -ObjectId $id -CsvDirectory $out } '*did not return the expected ID*' 1
 
-    Write-Host 'Entra identity batch: 10 parser checks, 18 report cases, and 6 guarded-failure cases passed; no network.'
+    Write-Host 'Entra identity batch: 11 parser checks, 22 report cases, and 6 guarded-failure cases passed; no network.'
 }
 finally {
     Remove-Item -LiteralPath $out -Recurse -Force

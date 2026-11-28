@@ -82,3 +82,7 @@ Each Entra report requires explicitly approved object IDs and a verified delegat
 | [`Export-SwpEntraGroupExpirationReview.ps1`](Export-SwpEntraGroupExpirationReview.ps1) | Check the policy-reported expiry of selected Microsoft 365 groups against a configurable review window. | [Guide](https://shellweplay.vercel.app/scripts/entra-group-expiration-review) |
 
 Live directory validation is pending. Do not infer a complete inventory or use these reports alone to change identity state.
+
+## Hybrid link coverage
+
+[Export-SwpEntraHybridLinkCoverage.ps1](Export-SwpEntraHybridLinkCoverage.ps1) reads an approved roster of up to 250 unique user GUIDs using PowerShell 7, Microsoft.Graph.Authentication and approved delegated User.Read.All in the intended Global Process-scoped tenant. Supply `-TenantId`, `-ObjectId`, and an existing `-CsvDirectory`. CSV: ObjectId, SyncState, ImmutableIdReview, ReportAsOfUtc. No raw anchor values, no matching or remediation; null does not prove never synced. Lab validation pending. See embedded help for a fictional example.
