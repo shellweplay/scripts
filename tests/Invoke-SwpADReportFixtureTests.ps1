@@ -66,7 +66,7 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
         [pscustomobject]@{
             Enabled = $true; whenCreated = $utcNow
             AccountExpirationDate = $utcNow.AddDays(-1); accountExpires = 12345L
-            Department = ' Lab North '; Office = '=1+1'; Title = 'Tech'; Company = 'Lab'
+            Manager = 'CN=Never Export'; Department = ' Lab North '; Office = '=1+1'; Title = 'Tech'; Company = 'Lab'
             mail = ' hidden@example.test '; EmployeeID = '-secret1'; employeeType = 'Employee'
         }
         [pscustomobject]@{
@@ -93,7 +93,7 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
         AccountCreationTrend = 6; AccountExpiryBuckets = 5; AccountStateTotals = 3
         DepartmentDistribution = 4; DuplicateEmployeeIdCounts = 1; DuplicateMailCounts = 1
         EmployeeTypeCoverage = 3; GroupDocumentationCoverage = 2; OfficeDistribution = 4
-        ProfileCompleteness = 4
+        ProfileCompleteness = 4; ManagerReferenceCoverage = 1
     }
     foreach ($name in ($expected.Keys | Sort-Object)) {
         $fileName = Join-Path $SourceDirectory ('Export-SwpAD' + $name + '.ps1')
@@ -177,6 +177,12 @@ Export-ModuleMember -Function Get-ADUser, Get-ADGroup
                     Assert-Equal $row.MissingOrNotVisible 1 'Group field missing'
                     Assert-Equal $row.Total 2 'Group population'
                 }
+            }
+            'ManagerReferenceCoverage' {
+                Assert-Equal $rows[0].Field Manager 'Manager field'
+                Assert-Equal $rows[0].Present 1 'Manager present'
+                Assert-Equal $rows[0].MissingOrNotVisible 4 'Manager missing'
+                Assert-Equal $rows[0].Total 5 'Manager population'
             }
             'ProfileCompleteness' {
                 $department = $rows | Where-Object Field -eq Department

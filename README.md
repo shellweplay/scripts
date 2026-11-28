@@ -94,3 +94,10 @@ Run in an authorized lab first and keep local exports access-controlled.
 
 Run the five offline PowerShell fixtures with `pwsh -NoProfile -File ./tests/Invoke-SwpUtilityFixtureTests.ps1`.
 No live AD or Splunk validation is claimed. The SPL recipe is not PowerShell.
+
+## November 28 daily reports
+
+- [AD manager reference coverage](active-directory/Export-SwpADManagerReferenceCoverage.ps1): aggregate counts in an authorized OU; no manager DNs exported.
+- [Entra hybrid link coverage](entra-id/Export-SwpEntraHybridLinkCoverage.ps1): approved roster, sync flag and immutable-ID presence only; no anchor values exported.
+
+Both v1.0.0, Lab validation pending. See category guides and offline fixture suites.
